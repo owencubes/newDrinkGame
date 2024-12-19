@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .leaderboard {
+            margin-top: 20px;
+        }
+        .leaderboard table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .leaderboard th, .leaderboard td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        .leaderboard th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to the Leaderboard!</h1>
+    <p id="message"></p>
+
+    <div class="leaderboard">
+        <h2>Leaderboard</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Score</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboardTable">
+                <!-- Leaderboard rows will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Check if the user has a cookie
+        function getCookie(name) {
+            let match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+            return match ? match[2] : null;
+        }
+
+        // Set a cookie
+        function setCookie(name, value, days) {
+            const expires = new Date(Date.now() + days * 864e5).toUTCString();
+            document.cookie = `${name}=${value}; expires=${expires}; path=/`;
+        }
+
+        // Update the leaderboard UI
+        function updateLeaderboard(data) {
+            const leaderboardTable = document.getElementById('leaderboardTable');
+            leaderboardTable.innerHTML = ''; // Clear current leaderboard
+
+            data.forEach(entry => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${entry.name}</td><td>${entry.score}</td>`;
+                leaderboardTable.appendChild(row);
+            });
+        }
+
+        // Function to handle user with or without cookie
+        function handleUser() {
+            const userName = getCookie('username');
+            const score = parseInt(getCookie('score') || '0', 10);
+
+            if (userName) {
+                // User has a cookie, add 1 to their score and save to server
+                fetch('/leaderboard', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: userName, score: score + 1 })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('message').textContent = `Welcome back, ${userName}! Your score is now ${score + 1}.`;
+                    fetchLeaderboard();  // Refresh the leaderboard
+                });
+            } else {
+                // User doesn't have a cookie, ask for their name
+                const name = prompt('Enter your name:');
+                if (name) {
+                    setCookie('username', name, 7);
+                    setCookie('score', 0, 7); // Initialize score to 0
+                    document.getElementById('message').textContent = `Welcome, ${name}! Your score is 0.`;
+                    fetchLeaderboard();  // Refresh the leaderboard
+                }
+            }
+        }
+
+        // Fetch leaderboard data from the server
+        function fetchLeaderboard() {
+            fetch('/leaderboard')
+                .then(response => response.json())
+                .then(data => {
+                    updateLeaderboard(data);
+                });
+        }
+
+        // Call the function when the page loads
+        window.onload = () => {
+            handleUser();
+        };
+    </script>
+</body>
+</html>
